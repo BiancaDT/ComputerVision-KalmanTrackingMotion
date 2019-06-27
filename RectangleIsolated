@@ -1,0 +1,62 @@
+import numpy as np
+import cv2 as cv2
+import imutils
+import matplotlib.pyplot as plt
+
+video = cv2.VideoCapture("VIDA.mp4")
+#video = cv2.VideoCapture("app_move.mp4")
+
+ret, first_frame = video.read()
+
+#first_frame = imutils.resize(first_frame, width=600)
+
+x = 6
+y = 577
+width = 108
+height = 54
+
+roi = first_frame[y: y+height, x: x+width]
+cv2.imshow("roi", roi)
+frames_counter = 1
+
+while True:
+
+    frames_counter = frames_counter + 1
+    check, frame = video.read()
+    cv2.imshow("roi", roi)
+
+    if check:
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+#ROI = region of interest
+
+
+        lower_range = np.array([110, 50, 50])
+        upper_range = np.array([130, 255, 255])
+
+        #blocks out in black everything not in the specified range
+        mask = cv2.inRange(hsv, lower_range, upper_range)
+
+
+        result = cv2.bitwise_and(frame, frame, mask = mask)
+
+        cv2.imshow("First Frame", first_frame)
+        #cv2.imshow("Frame", frame)
+        #cv2.imshow("Masked", mask)
+        #cv2.imshow("Result", result)
+
+        key = cv2.waitKey(10)
+    else:
+        break
+
+        #show a frame each 60 miliseconds
+        #if cv2.waitKey(60) == 27:
+            #break
+
+print("Number of frames in the video: ", frames_counter)
+video.release()
+cv2.destroyAllWindows()
+
+
+video.release()
+cv2.destroyAllWindows()
