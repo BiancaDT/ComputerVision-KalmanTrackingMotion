@@ -10,13 +10,15 @@ ret, first_frame = video.read()
 
 #first_frame = imutils.resize(first_frame, width=600)
 
+#Positions
 x = 6
 y = 577
 width = 108
 height = 54
 
+#Calculate the ROI
 roi = first_frame[y: y+height, x: x+width]
-cv2.imshow("roi", roi)
+#cv2.imshow("roi", roi)
 
 #Change the ROI to HSV
 hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
@@ -35,10 +37,19 @@ while True:
     check, frame = video.read()
     cv2.imshow("roi", roi)
 
+    term_criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1)
+
+
     if check:
         # Backprojection tells where the ROI is in the video
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         mask = cv2.calcBackProject([hsv], [0], roi_hist, [0, 180], 1)
+
+        # Meanshift finds the area with concentration of white points
+        _, track_window = cv2.meanShift(mask, (x, y, width, height), term_criteria)
+        print(track_window)
+        x, y, w, h = track_window
+        cv2.rectangle(frame, (x, y), (x +w, y+h), (0, 255, 0), 2)
 
         cv2.imshow("Mask", mask)
 
@@ -51,7 +62,7 @@ while True:
         #result = cv2.bitwise_and(frame, frame, mask = mask)
 
         #cv2.imshow("First Frame", first_frame)
-        #cv2.imshow("Frame", frame)
+        cv2.imshow("Frame", frame)
         #cv2.imshow("Masked", mask)
         #cv2.imshow("Result", result)
 
