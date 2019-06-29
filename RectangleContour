@@ -2,8 +2,10 @@ import numpy as np
 import cv2 as cv2
 import imutils
 import matplotlib.pyplot as plt
+import time
 
 video = cv2.VideoCapture("VIDA.mp4")
+#video = cv2.VideoCapture("app_move.mp4")
 
 ret, first_frame = video.read()
 
@@ -11,6 +13,11 @@ ret, first_frame = video.read()
 
 yellowLower = (0, 90, 80)
 yellowUpper = (30, 255, 255)
+
+counter = 0
+
+corx=0
+cory=0
 
 ##Kalman
 
@@ -33,8 +40,8 @@ P = np.array(np.mat('100, 0, 0, 0; 0, 100, 0, 0; 0, 0, 100, 0; 0, 0, 0, 100'))  
 u =  np.array(np.mat('0;0;0;0'))                                # external motion
 F =  np.array(np.mat('1, 0, 0.1, 0; 0, 1, 0, 0.1; 0, 0, 1, 0; 0, 0, 0, 1'))          # next state function
 H =  np.array(np.mat('1, 0, 0, 0; 0, 1, 0, 0'))                     # measurement function
-R =  np.array(np.mat('10000, 0; 0, 10000'))                                    # measurement uncertainty
-Rt =  np.array(np.mat('10000,0,0,0;0,10000,0,0;0,0,10000,0;0,0,0,10000'))           # next state uncertainty
+R =  np.array(np.mat('10, 0; 0, 10'))                                    # measurement uncertainty
+Rt =  np.array(np.mat('10,0,0,0;0,100,0,0;0,0,100,0;0,0,0,10'))           # next state uncertainty
 I =  np.array(np.mat('1,0,0,0;0,1,0,0;0,0,1,0;0,0,0,1'))
 
 class Point:
@@ -75,6 +82,7 @@ while True:
         width = rect[1][0]
 
         if width > 0:
+            time1 = time.time()
             cv2.drawContours(frame, [box], 0, (0, 0, 255), 2)
             #cv2.putText(frame, "thing", center, cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255)
             p = Point(int(x), int(y))
@@ -84,18 +92,25 @@ while True:
             x1, P = update(x1, P, np.mat('{}; {}'.format(corx, cory)), H, R)
             x1, P = predict(x1, P, u, F)
             predictedCoords = x1
+            #print("x1 is", x1)
 
     else:
         x1, P = predict(x1, P, u, F)
         predictedCoords = x1
+        print("Pred: ", predictedCoords)
+        print("Pred: ", predictedCoords[0])
+        print("Pred y: ", predictedCoords[1])
+        #Center, radius
         cv2.circle(frame, (predictedCoords[0], predictedCoords[1]), 20, [0, 255, 255], 2, 8)
 
 
     cv2.imshow("Frame", frame)
     #cv2.imshow("Mask", mask)
+    counter += 1
 
     if cv2.waitKey(200) == 27:
         break
 
 video.release()
 cv2.destroyAllWindows()
+
