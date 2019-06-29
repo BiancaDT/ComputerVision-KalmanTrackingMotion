@@ -1,0 +1,101 @@
+import numpy as np
+import cv2 as cv2
+import imutils
+import matplotlib.pyplot as plt
+
+video = cv2.VideoCapture("VIDA.mp4")
+
+ret, first_frame = video.read()
+
+#first_frame = imutils.resize(first_frame, width=600)
+
+yellowLower = (0, 90, 80)
+yellowUpper = (30, 255, 255)
+
+##Kalman
+
+def predict(x2, P, u, F):
+    x2 = np.matmul(F, x2) + u
+    P = np.matmul(F, np.matmul(P, F.transpose())) + Rt
+    return [x2, P]
+
+def update(x2, P, Z, H, R):
+    y = Z - np.matmul(H, x2)
+    S = np.matmul(H,np.matmul(P, H.transpose())) + R
+    K = np.matmul(P,np.matmul(H.transpose(), np.linalg.pinv(S)))
+    x2 = x2 + np.matmul(K, y)
+    P = np.matmul((I - np.matmul(K, H)),P)
+
+    return [x2, P]
+
+x1 = np.array(np.mat('0.0; 0.0; 0.0; 0.0'))           # initial state (location and velocity)
+P = np.array(np.mat('100, 0, 0, 0; 0, 100, 0, 0; 0, 0, 100, 0; 0, 0, 0, 100'))    # initial uncertainty
+u =  np.array(np.mat('0;0;0;0'))                                # external motion
+F =  np.array(np.mat('1, 0, 0.1, 0; 0, 1, 0, 0.1; 0, 0, 1, 0; 0, 0, 0, 1'))          # next state function
+H =  np.array(np.mat('1, 0, 0, 0; 0, 1, 0, 0'))                     # measurement function
+R =  np.array(np.mat('10000, 0; 0, 10000'))                                    # measurement uncertainty
+Rt =  np.array(np.mat('10000,0,0,0;0,10000,0,0;0,0,10000,0;0,0,0,10000'))           # next state uncertainty
+I =  np.array(np.mat('1,0,0,0;0,1,0,0;0,0,1,0;0,0,0,1'))
+
+class Point:
+    def __init__(self, x=0, y=0, c=""):
+        self.x = x
+        self.y = y
+
+while True:
+    check, frame = video.read()
+
+    if check is None:
+        break
+
+    blurred = cv2.GaussianBlur(frame, (11, 11), 0)
+    hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
+
+    kernel = np.ones((5, 5), np.uint8)
+
+    mask = cv2.inRange(hsv, yellowLower, yellowUpper)
+    mask = cv2.dilate(mask, None, iterations=2)
+    mask = cv2.erode(mask, None, iterations=2)
+
+    cnts = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL,
+                                cv2.CHAIN_APPROX_SIMPLE)
+    cnts = imutils.grab_contours(cnts)
+
+    if len(cnts) > 0:
+        c = max(cnts, key=cv2.contourArea)
+        #rect = (center(x, y), (width, height), angle of rotation)
+        rect = cv2.minAreaRect(c)
+        #((x, y)) = cv2.minAreaRect(c)
+        #box is the 4 corners of rectangle
+        box = cv2.boxPoints(rect)
+        box = np.int0(box)
+
+        x = rect[0][0]
+        y = rect[0][1]
+        width = rect[1][0]
+
+        if width > 0:
+            cv2.drawContours(frame, [box], 0, (0, 0, 255), 2)
+            #cv2.putText(frame, "thing", center, cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255)
+            p = Point(int(x), int(y))
+            corx = p.x
+            cory = p.y
+
+            x1, P = update(x1, P, np.mat('{}; {}'.format(corx, cory)), H, R)
+            x1, P = predict(x1, P, u, F)
+            predictedCoords = x1
+
+    else:
+        x1, P = predict(x1, P, u, F)
+        predictedCoords = x1
+        cv2.circle(frame, (predictedCoords[0], predictedCoords[1]), 20, [0, 255, 255], 2, 8)
+
+
+    cv2.imshow("Frame", frame)
+    #cv2.imshow("Mask", mask)
+
+    if cv2.waitKey(200) == 27:
+        break
+
+video.release()
+cv2.destroyAllWindows()
