@@ -13,7 +13,6 @@ yellowUpper = (30, 255, 255)
 u_x = 0
 u_y = 0
 
-
 ##Kalman variables
 
 def predict(x_k, P, u, A):
@@ -28,25 +27,26 @@ def update(x_k, P, Z, H, R):
     K = np.matmul(P, np.matmul(H.transpose(), np.linalg.pinv(S)))
     x_k = x_k + np.matmul(K, y)
     P = np.matmul((I - np.matmul(K, H)), P)
+    print("K is", K[0][0])
 
     return [x_k, P]
 
 
-x1 = np.array(np.mat('0.0; 0.0; 0.0; 0.0'))  # initial location and velocity
-P = np.array(np.mat('10, 0, 0, 0; 0, 10, 0, 0; 0, 0, 10, 0; 0, 0, 0, 10'))  # initial uncertainty
-u = np.array(np.mat('0;0;0;0'))  # control input
-A = np.array(np.mat('1, 0, 0.1, 0; 0, 1, 0, 0.1; 0, 0, 1, 0; 0, 0, 0, 1'))  # state matrix
+x1 = np.array(np.mat('0.0; 580.0; 0.0; 0.0'))  # initial location and velocity
+P = np.array(np.mat('100, 0, 0, 0; 0, 100, 0, 0; 0, 0, 100, 0; 0, 0, 0, 10'))  # initial uncertainty
+u = np.array(np.mat('0;0;10;0'))  # control input
+A = np.array(np.mat('1, 0, 0.5, 0; 0, 1, 0, 0.1; 0, 0, 1, 0; 0, 0, 0, 1'))  # state matrix
 H = np.array(np.mat('1, 0, 0, 0; 0, 1, 0, 0'))  # measurement
-R = np.array(np.mat('10, 0; 0, 10'))  # measurement uncertainty
-Q = np.array(np.mat('10,0,0,0;0,100,0,0;0,0,1000,0;0,0,0,10'))  # estimation uncertainty
+R = np.array(np.mat('10, 0; 0, 100'))  # measurement uncertainty, good values
+Q = np.array(np.mat('1000,0,0,0;0,100,0,0;0,0,500,0;0,0,0,100'))  # estimation uncertainty
 I = np.array(np.mat('1,0,0,0;0,1,0,0;0,0,1,0;0,0,0,1')) #identity matrix
 
+#Q estimate of position needs to be < 100
 
 class Point:
     def __init__(self, x=0, y=0):
         self.x = x
         self.y = y
-
 
 while True:
     check, frame = video.read()
@@ -92,6 +92,11 @@ while True:
             x1, P = predict(x1, P, u, A)
             KalmanPred = x1
 
+            #trial
+            predx = KalmanPred[0]
+            predy = KalmanPred[1]
+            cv2.circle(frame, (KalmanPred[0], KalmanPred[1]), 35, [100, 100, 30], 2, 8)
+
     else:
         x1, P = predict(x1, P, u, A)
         KalmanPred = x1
@@ -106,12 +111,12 @@ while True:
         # for rectangle, x, then x plus width minus y
         cv2.circle(frame, (KalmanPred[0], KalmanPred[1]), 35, [100, 100, 30], 2, 8)
         V2_rect = predx+width-height
-        print(V2_rect)
+        #print(V2_rect)
 
     cv2.imshow("Frame", frame)
     # cv2.imshow("Mask", mask)
 
-    if cv2.waitKey(100) == 27:
+    if cv2.waitKey(300) == 27:
         break
 
 video.release()
