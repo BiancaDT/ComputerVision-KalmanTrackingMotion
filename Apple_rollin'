@@ -11,6 +11,11 @@ u_y = 0
 
 video = cv2.VideoCapture('app_move.mp4')
 
+frame_width = int(video.get(3))
+frame_height = int(video.get(4))
+
+out = cv2.VideoWriter('apple_Kalman.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 20, (frame_width,frame_height))
+
 ##Kalman variables
 
 def predict(x_k, P, u, A):
@@ -24,7 +29,7 @@ def update(x_k, P, Z, H, R):
     K = np.matmul(P, np.matmul(H.transpose(), np.linalg.pinv(S)))
     x_k = x_k + np.matmul(K, y)
     P = np.matmul((I - np.matmul(K, H)), P)
-    print("K is", K[0][0])
+    #print("K is", K[0][0])
 
     return [x_k, P]
 
@@ -48,7 +53,8 @@ while True:
     if check is None:
         break
 
-    blurred = cv2.GaussianBlur(frame, (11, 11), 0)
+    #blurred = cv2.GaussianBlur(frame, (11, 11), 0)
+    blurred = cv2.medianBlur(frame, 3)
     hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
     kernel = np.ones((9, 9), np.uint8)
     mask = cv2.inRange(hsv, lowerApple, upperApple)
@@ -76,18 +82,21 @@ while True:
                 # trial
                 predx = KalmanPred[0]
                 predy = KalmanPred[1]
-                cv2.circle(frame, (KalmanPred[0], KalmanPred[1]), 20, [0, 255, 255], 2, 8)
+                cv2.circle(frame, (KalmanPred[0], KalmanPred[1]), 90, [0, 255, 255], 2, 8)
 
         else:
             x1, P = predict(x1, P, u, A)
             KalmanPred = x1
-            cv2.circle(frame, (KalmanPred[0], KalmanPred[1]), 20, [0, 255, 255], 2, 8)
+            cv2.circle(frame, (KalmanPred[0], KalmanPred[1]), 90, [0, 255, 255], 2, 8)
 
+    out.write(frame)
     cv2.imshow("Frame", frame)
     #cv2.imshow("Mask", mask)
 
-    if cv2.waitKey(100) == 27:
+    if cv2.waitKey(1) == 27:
         break
 
+
 video.release()
+out.release()
 cv2.destroyAllWindows()
